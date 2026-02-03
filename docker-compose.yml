@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # Banco de Dados - Coração da persistência do ZeroCore
+  db:
+    image: postgres:16-alpine
+    container_name: zerocore_db
+    restart: always
+    environment:
+      POSTGRES_USER: user_zerocore
+      POSTGRES_PASSWORD: password_zerocore
+      POSTGRES_DB: zerocore_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Backend - API robusta em FastAPI
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: zerocore_api
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user_zerocore:password_zerocore@db:5432/zerocore_db
+    depends_on:
+      - db
+
+  # Frontend - Interface Next.js Responsiva
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: zerocore_web
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
