@@ -1,0 +1,30 @@
+--- Python / Backend ---
+
+pycache/
+*.py[cod]
+*$py.class
+venv/
+.env
+db.sqlite3
+/backend/data/
+
+--- Node / Frontend ---
+
+node_modules/
+.next/
+out/
+build/
+.DS_Store
+.local
+npm-debug.log
+yarn-debug.log*
+yarn-error.log*
+
+--- Docker ---
+
+.docker-logs/
+
+--- IDEs ---
+
+.vscode/
+.idea/
