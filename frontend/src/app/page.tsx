@@ -1,58 +1,56 @@
-// Caminho: ZeroCore/frontend/src/app/page.tsx
+// Local: ZeroCore/frontend/src/app/page.tsx
 'use client';
 
 import React, { useState } from 'react';
-// Importação ajustada para usar caminhos relativos para garantir compatibilidade
-import Sidebar from '../components/layout/Sidebar';
-import { Clock, Bell } from 'lucide-react';
+/**
+ * O erro de resolução de caminho geralmente ocorre devido à configuração do alias no Next.js.
+ * Se você usou o padrão do 'create-next-app', o alias '@/' aponta para a pasta 'src/'.
+ */
+import Sidebar from '@/components/layout/Sidebar';
+import { Bell, Clock } from 'lucide-react';
 
-export default function Page() {
+export default function App() {
   const [isOpen, setIsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [userRole, setUserRole] = useState('ADMIN');
 
   return (
-    <div className="flex h-screen bg-[#f8f9fa] text-[#1a1a1a]">
+    <div className="flex h-screen bg-gray-50">
+      {/* Componente Sidebar importado de src/components/layout/Sidebar.tsx */}
       <Sidebar 
         isOpen={isOpen} 
         setIsOpen={setIsOpen} 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab}
-        userRole={userRole}
-        setUserRole={setUserRole}
+        setActiveTab={setActiveTab} 
       />
 
-      <main className="flex-1 overflow-y-auto p-10">
-        <header className="mb-10 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-[#0a1d37] capitalize font-serif">
-              {activeTab.replace('-', ' ')}
-            </h1>
-            <p className="text-gray-400 text-sm">Painel Operacional MDR Advocacia</p>
-          </div>
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Cabeçalho superior fixo */}
+        <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-10 shadow-sm">
+          <h1 className="text-2xl font-bold text-[#0a1d37] capitalize">{activeTab}</h1>
           
-          <div className="flex gap-4">
-             <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
-                <Clock size={16} className="text-[#c5a059]" />
-                <span className="text-sm font-bold text-[#0a1d37]">08:14</span>
-             </div>
-             <button className="relative p-2 bg-white rounded-xl shadow-sm border border-gray-100 text-gray-400">
-                <Bell size={20} />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-[#c5a059] rounded-full"></span>
-             </button>
+          <div className="flex items-center gap-4">
+            {/* Widget de Relógio / Status */}
+            <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
+              <Clock size={16} className="text-[#c5a059]" />
+              <span className="text-sm font-bold">08:14</span>
+            </div>
+            {/* Botão de Notificações */}
+            <button className="p-2 text-gray-400 hover:text-[#0a1d37] transition-colors">
+              <Bell size={20} />
+            </button>
           </div>
         </header>
 
-        {/* Área de Conteúdo do Módulo */}
-        <div className="bg-white p-12 rounded-[2rem] shadow-sm border border-gray-100 min-h-[500px] flex items-center justify-center text-gray-300 italic border-dashed border-2">
-          Módulo {activeTab} em desenvolvimento...
-        </div>
+        {/* Área de conteúdo dinâmico baseada na tab ativa */}
+        <section className="flex-1 p-10 overflow-y-auto">
+          <div className="bg-white border-2 border-dashed border-gray-200 rounded-3xl h-full flex items-center justify-center text-gray-400">
+            <div className="text-center">
+              <p className="text-lg italic mb-2">Módulo {activeTab} em desenvolvimento...</p>
+              <p className="text-sm">Aguardando integração com a ZeroCore API</p>
+            </div>
+          </div>
+        </section>
       </main>
-
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap');
-        .font-serif { font-family: 'Playfair Display', serif; }
-      `}</style>
     </div>
   );
 }
