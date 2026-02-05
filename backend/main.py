@@ -1,10 +1,10 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
-from routers import auth, helpdesk
+from routers import auth, helpdesk, announcements
 from auth.security import get_current_user
 
-# Cria as tabelas no startup (Útil para o ambiente de dev do estagiário)
+# Garante a criação das novas tabelas (Announcements)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="ZeroCore v3.0 - MDR Advocacia")
@@ -17,13 +17,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inclui os módulos de autenticação e helpdesk
+# Inclusão dos Roteadores
 app.include_router(auth.router)
 app.include_router(helpdesk.router)
+app.include_router(announcements.router)
 
 @app.get("/")
 async def root():
-    return {"message": "ZeroCore API Online", "version": "3.0.0"}
+    return {"message": "ZeroCore API Online", "version": "3.1.0"}
 
 @app.get("/me")
 async def read_users_me(current_user: dict = Depends(get_current_user)):
