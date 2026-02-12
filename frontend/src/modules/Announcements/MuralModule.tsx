@@ -28,6 +28,15 @@ export const MuralModule = ({ user }: MuralProps) => {
 
   useEffect(() => { fetchAnnouncements(); }, []);
 
+  // Verifica se o usuário tem QUALQUER permissão de postagem para mostrar o botão
+  const canPostAnything = user && (
+    user.role === 'admin' || 
+    user.role === 'diretoria' || 
+    user.role === 'supervisor' || 
+    user.role === 'coordenador' ||
+    user.permissions?.length > 0 // Se tiver qualquer flag (post_general, post_tech)
+  );
+
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between mb-4">
@@ -35,9 +44,13 @@ export const MuralModule = ({ user }: MuralProps) => {
           <h3 className="font-black text-[#002147] uppercase text-sm tracking-[0.3em]">Mural de Comunicação</h3>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Feed de notícias do escritório</p>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="bg-[#002147] text-[#D4AF37] px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all shadow-xl active:scale-95">
-          <Plus size={18} /> Novo Aviso
-        </button>
+        
+        {/* Botão protegido por permissão */}
+        {canPostAnything && (
+          <button onClick={() => setIsModalOpen(true)} className="bg-[#002147] text-[#D4AF37] px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all shadow-xl active:scale-95">
+            <Plus size={18} /> Novo Aviso
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -51,7 +64,9 @@ export const MuralModule = ({ user }: MuralProps) => {
                   <div className="bg-slate-50 p-4 rounded-2xl text-[#002147] group-hover:bg-[#002147] group-hover:text-[#D4AF37] transition-all"><Bell size={20} /></div>
                   <div>
                     <h4 className="font-bold text-slate-800 tracking-tight text-lg">{ann.title}</h4>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5">{ann.category} • {new Date(ann.created_at).toLocaleDateString()}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5">
+                      {ann.category === 'SECTOR' ? `SETOR: ${ann.target_dept}` : ann.category} • {new Date(ann.created_at).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
                 <p className="text-sm text-slate-600 leading-relaxed font-medium whitespace-pre-wrap pl-1">{ann.content}</p>
@@ -66,7 +81,16 @@ export const MuralModule = ({ user }: MuralProps) => {
         </div>
         <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 h-fit shadow-sm">
            <h4 className="font-black text-[#002147] text-[10px] uppercase tracking-[0.3em] mb-6">Informação</h4>
-           <p className="text-xs text-slate-400 leading-relaxed font-medium">Este painel é regulado por cargo e setor.</p>
+           <p className="text-xs text-slate-400 leading-relaxed font-medium mb-4">Este painel é personalizado para você.</p>
+           
+           <div className="space-y-2">
+             <p className="text-[10px] font-bold text-slate-300 uppercase">Seus Setores:</p>
+             <div className="flex flex-wrap gap-2">
+               {user?.depts.map(d => (
+                 <span key={d} className="bg-slate-50 text-slate-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase border border-slate-100">{d}</span>
+               ))}
+             </div>
+           </div>
         </div>
       </div>
 

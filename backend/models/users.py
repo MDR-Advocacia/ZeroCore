@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, JSON, Text
+from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from database import Base
@@ -13,6 +13,8 @@ class User(Base):
     role = Column(String, nullable=False, default="user")
     is_active = Column(Boolean, default=True)
     last_login = Column(DateTime, default=datetime.utcnow)
+    
+    # Relacionamentos com String para evitar Circular Import
     employee = relationship("Employee", back_populates="user", uselist=False)
     announcements = relationship("Announcement", back_populates="author")
 
@@ -27,22 +29,5 @@ class Employee(Base):
     title = Column(String)
     meta = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
+    
     user = relationship("User", back_populates="employee")
-
-class Announcement(Base):
-    """
-    Tabela de Mural de Avisos com níveis de visibilidade.
-    Categorias: GENERAL, TECH, OPS_MGMT, STRAT_MGMT, SECTOR
-    """
-    __tablename__ = "announcements"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    title = Column(String, nullable=False)
-    content = Column(Text, nullable=False)
-    category = Column(String, nullable=False) # Nível do painel
-    target_dept = Column(String, nullable=True) # Para avisos de setor específico
-    
-    created_at = Column(DateTime, default=datetime.utcnow)
-    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    
-    author = relationship("User", back_populates="announcements")

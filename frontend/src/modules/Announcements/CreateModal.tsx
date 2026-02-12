@@ -1,11 +1,5 @@
-"use client";
-
-import React, { useState } from 'react';
-import { 
-  X, 
-  Loader2, 
-  AlertCircle 
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Loader2, Send } from 'lucide-react';
 import { UserData } from '../../types/user';
 
 interface CreateModalProps {
@@ -16,142 +10,175 @@ interface CreateModalProps {
 }
 
 export const CreateModal = ({ isOpen, onClose, user, onSuccess }: CreateModalProps) => {
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [category, setCategory] = useState('GENERAL');
-  const [targetDept, setTargetDept] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [departmentsList, setDepartmentsList] = useState<string[]>([]);
+  const [loadingDepts, setLoadingDepts] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    title: '',
+    content: '',
+    category: '',
+    target_dept: ''
+  });
 
-  const DEPARTMENTS = ['TI', 'RH', 'DP', 'JURÍDICO', 'MARKETING', 'DIRETORIA', 'FINANCEIRO'];
+  // Carrega a lista de departamentos do AD quando o modal abre
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({ title: '', content: '', category: '', target_dept: '' });
+      fetchDepartments();
+    }
+  }, [isOpen]);
 
-  if (!isOpen) return null;
+  const fetchDepartments = async () => {
+    try {
+      setLoadingDepts(true);
+      const token = localStorage.getItem('zc_token');
+      const apiHost = window.location.hostname;
+      
+      const res = await fetch(`http://${apiHost}:8000/auth/departments`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setDepartmentsList(data);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar departamentos:", error);
+    } finally {
+      setLoadingDepts(false);
+    }
+  };
+
+  if (!isOpen || !user) return null;
+
+  // Permissões
+  const canPostGeneral = user.role === 'admin' || user.role === 'diretoria' || user.permissions?.includes('post_general');
+  const canPostTech = user.role === 'admin' || user.permissions?.includes('post_tech');
+  const canPostOps = ['admin', 'diretoria', 'coordenador', 'supervisor'].includes(user.role);
+  const canPostSector = ['supervisor', 'coordenador'].includes(user.role) || canPostGeneral;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
-    const token = localStorage.getItem('zc_token');
     try {
-      const response = await fetch('http://localhost:8000/announcements/', {
+      const token = localStorage.getItem('zc_token');
+      const apiHost = window.location.hostname;
+      const res = await fetch(`http://${apiHost}:8000/announcements/`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Authorization': `Bearer ${token}` 
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
-          title, 
-          content, 
-          category, 
-          target_dept: category === 'SECTOR' ? targetDept : null 
-        })
+        body: JSON.stringify(formData)
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Erro ao publicar aviso.');
-      }
+      if (!res.ok) throw new Error('Falha ao postar');
       
       onSuccess();
       onClose();
-      setTitle(''); 
-      setContent('');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error) {
+      alert('Erro ao publicar aviso. Verifique suas permissões.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#002147]/80 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20 flex flex-col animate-in zoom-in-95 duration-300">
-        
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl p-8 relative">
+        <button onClick={onClose} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
+          <X size={24} />
+        </button>
+
+        <h3 className="font-black text-[#002147] uppercase tracking-widest text-lg mb-6">Novo Comunicado</h3>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <h3 className="text-xl font-black text-[#002147] uppercase tracking-tighter">Novo Aviso</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Publique para o escritório</p>
-          </div>
-          <button 
-            onClick={onClose} 
-            className="p-3 hover:bg-red-50 text-slate-300 hover:text-red-500 rounded-2xl transition-all"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-8 space-y-5 overflow-y-auto max-h-[70vh]">
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { id: 'GENERAL', label: 'Geral' },
-              { id: 'TECH', label: 'TI' },
-              { id: 'OPS_MGMT', label: 'Operacional' },
-              { id: 'SECTOR', label: 'Setor' }
-            ].map((cat) => (
-              <button 
-                key={cat.id} 
-                type="button" 
-                onClick={() => setCategory(cat.id)}
-                className={`p-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
-                  category === cat.id 
-                  ? 'border-[#D4AF37] bg-yellow-50 text-[#002147] shadow-inner' 
-                  : 'border-slate-100 text-slate-400 hover:border-slate-200'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {category === 'SECTOR' && (
-            <select 
-              required
-              value={targetDept} 
-              onChange={(e) => setTargetDept(e.target.value)} 
-              className="w-full p-4 bg-slate-50 border-slate-100 border-2 rounded-2xl text-sm font-bold outline-none focus:border-[#D4AF37] transition-colors"
-            >
-              <option value="">Seleccione o Setor Alvo...</option>
-              {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
-          )}
-
-          <div className="space-y-4">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título</label>
             <input 
-              required 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)} 
-              placeholder="Título do Comunicado" 
-              className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none text-sm font-bold focus:border-[#D4AF37] transition-colors" 
-            />
-            <textarea 
-              required 
-              rows={4} 
-              value={content} 
-              onChange={(e) => setContent(e.target.value)} 
-              placeholder="Escreva sua mensagem aqui..." 
-              className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-[2rem] outline-none text-sm font-medium resize-none focus:border-[#D4AF37] transition-colors" 
+              required
+              type="text" 
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#002147] transition-all"
+              value={formData.title}
+              onChange={e => setFormData({...formData, title: e.target.value})}
+              placeholder="Resumo do assunto..."
             />
           </div>
 
-          {error && (
-            <div className="p-4 bg-red-50 rounded-2xl flex items-center gap-3 text-red-600 border border-red-100">
-              <AlertCircle size={18} />
-              <p className="text-[10px] font-black uppercase tracking-tight">{error}</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Categoria</label>
+              <select 
+                required
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#002147]"
+                value={formData.category}
+                onChange={e => setFormData({...formData, category: e.target.value, target_dept: ''})}
+              >
+                <option value="">Selecione...</option>
+                {canPostGeneral && <option value="GENERAL">Institucional (Geral)</option>}
+                {canPostTech && <option value="TECH">Técnico / TI</option>}
+                {canPostOps && <option value="OPS_MGMT">Gestão Operacional</option>}
+                {canPostSector && <option value="SECTOR">Aviso Interno de Setor</option>}
+              </select>
             </div>
-          )}
-        </form>
 
-        <div className="p-8 bg-slate-50/50 border-t border-slate-100">
-          <button 
-            type="submit"
-            onClick={handleSubmit}
-            disabled={loading} 
-            className="w-full py-5 bg-[#002147] text-[#D4AF37] font-black rounded-2xl text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:bg-[#001a38] transition-all disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'Confirmar Publicação'}
-          </button>
-        </div>
+            {formData.category === 'SECTOR' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Destino</label>
+                {loadingDepts ? (
+                  <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center text-xs text-slate-400">
+                    <Loader2 className="animate-spin mr-2" size={14} /> Carregando...
+                  </div>
+                ) : (
+                  <select 
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#002147]"
+                    value={formData.target_dept}
+                    onChange={e => setFormData({...formData, target_dept: e.target.value})}
+                  >
+                    <option value="">Para quem?</option>
+                    
+                    {canPostGeneral ? (
+                       // CASO 1: Admin/RH -> Vê TODOS os setores trazidos do AD
+                       departmentsList.map(d => (
+                         <option key={d} value={d}>{d}</option>
+                       ))
+                    ) : (
+                      // CASO 2: Supervisor -> Só vê os setores onde ele tem permissão (vindo do login dele)
+                      user.depts.map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))
+                    )}
+                  </select>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mensagem</label>
+            <textarea 
+              required
+              rows={5}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#002147] resize-none"
+              value={formData.content}
+              onChange={e => setFormData({...formData, content: e.target.value})}
+              placeholder="Digite o conteúdo do comunicado..."
+            />
+          </div>
+
+          <div className="pt-2 flex justify-end">
+             <button 
+               type="submit" 
+               disabled={loading || !formData.category}
+               className="bg-[#002147] text-[#D4AF37] px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+             >
+               {loading ? <Loader2 className="animate-spin" size={16} /> : <><Send size={16} /> Publicar</>}
+             </button>
+          </div>
+        </form>
       </div>
     </div>
   );

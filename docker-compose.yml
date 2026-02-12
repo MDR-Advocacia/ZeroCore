@@ -7,7 +7,7 @@ services:
     container_name: zerocore_db
     restart: always
     environment:
-      POSTGRES_USER: user_zerocore
+      POSTGRES_USER: user_zerocore      # <--- O Banco espera este usuário
       POSTGRES_PASSWORD: password_zerocore
       POSTGRES_DB: zerocore_db
     ports:
@@ -26,7 +26,16 @@ services:
     ports:
       - "8000:8000"
     environment:
+      # CORREÇÃO AQUI: Atualizado para bater com as credenciais do serviço 'db' acima
+      # Formato: postgresql://USUARIO:SENHA@HOST:PORTA/NOME_BANCO
       - DATABASE_URL=postgresql://user_zerocore:password_zerocore@db:5432/zerocore_db
+      
+      # Configurações do AD (Mantenha as suas)
+      - AD_SERVER=ldap://192.168.0.31
+      - AD_DOMAIN=mdr.local
+      - AD_BASE_DN=DC=mdr,DC=local
+      - AD_BIND_USER=svc_zerocore@mdr.local  
+      - AD_BIND_PASSWORD=mdr.12345    
     depends_on:
       - db
 
