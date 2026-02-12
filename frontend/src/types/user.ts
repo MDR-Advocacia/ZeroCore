@@ -1,26 +1,20 @@
-import React from 'react';
+/**
+ * CAMINHO: src/types/user.ts
+ * Definições de tipos para o sistema ZeroCore.
+ */
+import { ReactNode } from 'react';
 
 export interface UserData {
+  id: string;
   name: string;
   role: string;
-  departments: string[]; // Grupos ZC_DEPT_ limpos vindos do AD
-  location?: string;
-  username: string;
-}
-
-export interface Announcement {
-  id: string;
-  title: string;
-  content: string;
-  category: 'GENERAL' | 'TECH' | 'OPS_MGMT' | 'STRAT_MGMT' | 'SECTOR';
-  target_dept?: string;
-  created_at: string;
-  author_name?: string;
+  dept: string;
+  email: string;
 }
 
 export interface MenuItem {
   title: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   roles: string[];
-  module: string;
+  path: string; // Caminho da URL para navegação
 }
