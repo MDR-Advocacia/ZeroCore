@@ -1,100 +1,184 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Bell, Plus, Loader2, Megaphone } from 'lucide-react';
-import { Announcement, UserData } from '../../types/user';
+import { Bell, Plus, Loader2, Megaphone, Paperclip, Eye, CheckCircle2, Filter, Archive as ArchiveIcon } from 'lucide-react';
+import { UserData } from '../../types/user';
 import { CreateModal } from './CreateModal';
+import { AnnouncementDetailModal } from './AnnouncementDetailModal';
 
-interface MuralProps {
-  user: UserData | null;
-}
-
-export const MuralModule = ({ user }: MuralProps) => {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+export const MuralModule = ({ user }: { user: UserData | null }) => {
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedAnn, setSelectedAnn] = useState<any | null>(null);
+  
+  // Estados de Filtro
+  const [activeTab, setActiveTab] = useState('ALL');
+  const [viewArchived, setViewArchived] = useState(false);
+
+  const isPrivileged = user && (
+    user.role === 'admin' || 
+    user.role === 'diretoria' || 
+    user.role === 'coordenador' ||
+    user.permissions?.includes('post_general') ||
+    user.permissions?.includes('post_tech')
+  );
 
   const fetchAnnouncements = async () => {
     const token = localStorage.getItem('zc_token');
+    const apiHost = window.location.hostname;
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:8000/announcements/', {
+      const url = `http://${apiHost}:8000/announcements/?category=${activeTab}&show_archived=${viewArchived}`;
+      const res = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
       setAnnouncements(Array.isArray(data) ? data : []);
-    } catch (e) { console.error("Erro ao buscar:", e); } finally { setLoading(false); }
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
-  useEffect(() => { fetchAnnouncements(); }, []);
+  // Re-busca quando os filtros mudam
+  useEffect(() => { 
+    fetchAnnouncements(); 
+  }, [activeTab, viewArchived]);
 
-  // Verifica se o usuário tem QUALQUER permissão de postagem para mostrar o botão
-  const canPostAnything = user && (
-    user.role === 'admin' || 
-    user.role === 'diretoria' || 
-    user.role === 'supervisor' || 
-    user.role === 'coordenador' ||
-    user.permissions?.length > 0 // Se tiver qualquer flag (post_general, post_tech)
-  );
+  const categories = [
+    { id: 'ALL', label: 'Todos' },
+    { id: 'GENERAL', label: 'Institucional' },
+    { id: 'SECTOR', label: 'Setoriais' },
+    { id: 'TECH', label: 'Técnicos' },
+    { id: 'OPS_MGMT', label: 'Gestão' }
+  ];
 
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between mb-4">
+      {/* Header e Ações */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h3 className="font-black text-[#002147] uppercase text-sm tracking-[0.3em]">Mural de Comunicação</h3>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Feed de notícias do escritório</p>
+          <h3 className="font-black text-[#002147] uppercase text-sm tracking-[0.3em]">Comunicação Interna</h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            {viewArchived ? '📁 Arquivo de Comunicados' : 'Mural de Avisos e Portarias'}
+          </p>
         </div>
         
-        {/* Botão protegido por permissão */}
-        {canPostAnything && (
-          <button onClick={() => setIsModalOpen(true)} className="bg-[#002147] text-[#D4AF37] px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all shadow-xl active:scale-95">
-            <Plus size={18} /> Novo Aviso
-          </button>
+        <div className="flex items-center gap-3">
+          {isPrivileged && (
+            <button 
+              onClick={() => { setViewArchived(!viewArchived); setActiveTab('ALL'); }}
+              className={`px-4 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all border ${
+                viewArchived 
+                ? 'bg-amber-100 text-amber-700 border-amber-200' 
+                : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'
+              }`}
+            >
+              <ArchiveIcon size={14} /> {viewArchived ? 'Ver Ativos' : 'Arquivados'}
+            </button>
+          )}
+
+          {isPrivileged && !viewArchived && (
+            <button 
+              onClick={() => setIsCreateOpen(true)} 
+              className="bg-[#002147] text-[#D4AF37] px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all shadow-lg"
+            >
+              <Plus size={16} /> Novo Comunicado
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Barra de Filtros (Tabs) */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="bg-slate-100 p-1 rounded-2xl flex items-center">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveTab(cat.id)}
+              className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                activeTab === cat.id 
+                ? 'bg-white text-[#002147] shadow-sm' 
+                : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid de Avisos */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          <div className="col-span-full py-20 text-center"><Loader2 className="animate-spin mx-auto text-slate-200" size={40} /></div>
+        ) : announcements.length > 0 ? (
+          announcements.map((ann) => (
+            <div 
+              key={ann.id} 
+              onClick={() => setSelectedAnn(ann)}
+              className={`bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden ${ann.is_archived ? 'opacity-75 grayscale-[0.5]' : ''}`}
+            >
+              <div className={`absolute top-0 right-8 px-4 py-1.5 rounded-b-xl text-[8px] font-black uppercase tracking-widest ${
+                ann.category === 'TECH' ? 'bg-blue-500 text-white' : 
+                ann.category === 'GENERAL' ? 'bg-[#002147] text-[#D4AF37]' : 
+                ann.category === 'SECTOR' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500'
+              }`}>
+                {ann.category === 'SECTOR' ? ann.target_dept : ann.category}
+              </div>
+
+              <div className="mb-4">
+                <h4 className="font-black text-slate-800 text-base leading-tight group-hover:text-[#002147] transition-colors line-clamp-2 pr-10">
+                  {ann.title}
+                </h4>
+              </div>
+
+              <p className="text-xs text-slate-500 leading-relaxed line-clamp-3 mb-6 font-medium">
+                {ann.content}
+              </p>
+
+              <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                <div className="flex items-center gap-3">
+                  {ann.attachment_url && (
+                    <div className="flex items-center gap-1 text-[#002147] bg-slate-50 px-2 py-1 rounded-md">
+                      <Paperclip size={12} />
+                      <span className="text-[10px] font-bold">Anexo</span>
+                    </div>
+                  )}
+                  {ann.has_acknowledged && (
+                    <CheckCircle2 size={16} className="text-green-500" />
+                  )}
+                </div>
+                
+                <div className="text-right">
+                  <p className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Postado por {ann.author_name}</p>
+                  <p className="text-[8px] font-bold text-slate-400 mt-0.5">{new Date(ann.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full py-20 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
+             <Megaphone size={40} className="mx-auto text-slate-100 mb-4" />
+             <p className="text-slate-300 font-black uppercase tracking-widest text-[10px]">
+               {viewArchived ? 'Nenhum aviso no arquivo' : 'Nenhum aviso encontrado para este filtro'}
+             </p>
+          </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-4">
-          {loading ? (
-             <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto text-slate-200" size={40} /></div>
-          ) : announcements.length > 0 ? (
-            announcements.map((ann) => (
-              <div key={ann.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                <div className="flex items-center gap-5 mb-4">
-                  <div className="bg-slate-50 p-4 rounded-2xl text-[#002147] group-hover:bg-[#002147] group-hover:text-[#D4AF37] transition-all"><Bell size={20} /></div>
-                  <div>
-                    <h4 className="font-bold text-slate-800 tracking-tight text-lg">{ann.title}</h4>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5">
-                      {ann.category === 'SECTOR' ? `SETOR: ${ann.target_dept}` : ann.category} • {new Date(ann.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-sm text-slate-600 leading-relaxed font-medium whitespace-pre-wrap pl-1">{ann.content}</p>
-              </div>
-            ))
-          ) : (
-            <div className="bg-white p-20 rounded-[3rem] border-2 border-dashed border-slate-100 text-center">
-              <Megaphone size={48} className="mx-auto text-slate-100 mb-4" />
-              <p className="text-slate-300 font-black uppercase tracking-widest text-xs">O mural está vazio no momento</p>
-            </div>
-          )}
-        </div>
-        <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 h-fit shadow-sm">
-           <h4 className="font-black text-[#002147] text-[10px] uppercase tracking-[0.3em] mb-6">Informação</h4>
-           <p className="text-xs text-slate-400 leading-relaxed font-medium mb-4">Este painel é personalizado para você.</p>
-           
-           <div className="space-y-2">
-             <p className="text-[10px] font-bold text-slate-300 uppercase">Seus Setores:</p>
-             <div className="flex flex-wrap gap-2">
-               {user?.depts.map(d => (
-                 <span key={d} className="bg-slate-50 text-slate-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase border border-slate-100">{d}</span>
-               ))}
-             </div>
-           </div>
-        </div>
-      </div>
-
-      <CreateModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} user={user} onSuccess={fetchAnnouncements} />
+      <CreateModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} user={user} onSuccess={fetchAnnouncements} />
+      
+      {selectedAnn && (
+        <AnnouncementDetailModal 
+          ann={selectedAnn} 
+          user={user} 
+          onClose={() => setSelectedAnn(null)} 
+          onRefresh={fetchAnnouncements}
+        />
+      )}
     </div>
   );
 };

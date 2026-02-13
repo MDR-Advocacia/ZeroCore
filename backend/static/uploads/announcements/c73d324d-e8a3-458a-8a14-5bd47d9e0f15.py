@@ -1,0 +1,1 @@
+# Este arquivo transforma a pasta auth em um pacote Python
