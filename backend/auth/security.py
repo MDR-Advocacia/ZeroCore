@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import jwt, JWTError
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import os
@@ -18,7 +18,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Ajuste da URL do token para bater com o prefixo /auth definido no router
+# Mantemos o oauth2_scheme apenas caso você queira usar o Swagger UI (/docs) no futuro,
+# mas não o usaremos mais para as requisições do seu frontend (Next.js).
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 def verify_password(plain_password, hashed_password):
@@ -27,7 +28,6 @@ def verify_password(plain_password, hashed_password):
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-# AQUI ESTAVA O ERRO: Adicionado o parâmetro expires_delta
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
@@ -39,15 +39,25 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+# --- NOVA FUNÇÃO: Extrai o token de dentro do Cookie (HttpOnly) ---
+def get_token_from_cookie(request: Request):
+    token = request.cookies.get("zc_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Não autenticado. Cookie ausente.",
+        )
+    return token
+
+# --- ATUALIZADO: Agora depende de get_token_from_cookie em vez de oauth2_scheme ---
+async def get_current_user(token: str = Depends(get_token_from_cookie), db: Session = Depends(get_db)):
     """
-    Decodifica o token e recupera o usuário.
+    Decodifica o token do cookie e recupera o usuário.
     Retorna um dicionário com dados do Banco + Dados do Token (AD).
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Não foi possível validar as credenciais",
-        headers={"WWW-Authenticate": "Bearer"},
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])

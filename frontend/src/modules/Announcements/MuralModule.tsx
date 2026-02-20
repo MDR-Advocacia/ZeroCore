@@ -1,21 +1,52 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Bell, Plus, Loader2, Megaphone, Paperclip, Eye, CheckCircle2, Filter, Archive as ArchiveIcon } from 'lucide-react';
+import { Bell, Plus, Loader2, Megaphone, Paperclip, CheckCircle2, Archive as ArchiveIcon } from 'lucide-react';
 import { UserData } from '../../types/user';
-import { CreateModal } from './CreateModal';
-import { AnnouncementDetailModal } from './AnnouncementDetailModal';
+
+// IMPORTANTE: Certifique-se de que estes componentes existem no seu projeto
+import { CreateModal } from '../Announcements/CreateModal';
+import { AnnouncementDetailModal } from '../Announcements/AnnouncementDetailModal';
+
+/**
+ * Utilitário de API centralizado para o Mural.
+ * Usa o Proxy (/api) e força o envio de Cookies.
+ */
+const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
+  const baseUrl = "/api";
+  try {
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      ...options,
+      headers: { 
+        'Content-Type': 'application/json', 
+        ...options.headers 
+      },
+      credentials: 'include', // 🔥 ESSENCIAL: Garante que o cookie zc_token seja enviado
+    });
+
+    if (response.status === 401) {
+      console.warn("🚨 [Mural] Sessão expirada no servidor.");
+      localStorage.clear();
+      if (typeof window !== 'undefined') window.location.href = '/login';
+      return Promise.reject(new Error("Sessão Expirada"));
+    }
+    return response;
+  } catch (error) { 
+    console.error("🚨 [Mural] Erro de comunicação via Proxy:", error);
+    throw error; 
+  }
+};
 
 export const MuralModule = ({ user }: { user: UserData | null }) => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedAnn, setSelectedAnn] = useState<any | null>(null);
-  
-  // Estados de Filtro
   const [activeTab, setActiveTab] = useState('ALL');
   const [viewArchived, setViewArchived] = useState(false);
+  
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedAnn, setSelectedAnn] = useState<any | null>(null);
 
+  // Lógica de permissões restaurada
   const isPrivileged = user && (
     user.role === 'admin' || 
     user.role === 'diretoria' || 
@@ -25,24 +56,27 @@ export const MuralModule = ({ user }: { user: UserData | null }) => {
   );
 
   const fetchAnnouncements = async () => {
-    const token = localStorage.getItem('zc_token');
-    const apiHost = window.location.hostname;
     try {
       setLoading(true);
-      const url = `http://${apiHost}:8000/announcements/?category=${activeTab}&show_archived=${viewArchived}`;
-      const res = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      setAnnouncements(Array.isArray(data) ? data : []);
+      /**
+       * 🔥 A SOLUÇÃO PARA O ERRO net::ERR_NAME_NOT_RESOLVED:
+       * Adicionamos a barra "/" ANTES do "?" para bater na rota exata do FastAPI.
+       * Isso impede o Redirect 307 que vaza o nome interno "backend:8000".
+       */
+      const url = `/announcements?category=${activeTab}&show_archived=${viewArchived}`;
+      const res = await fetchAPI(url);
+      
+      if (res.ok) {
+        const data = await res.json();
+        setAnnouncements(Array.isArray(data) ? data : []);
+      }
     } catch (e) { 
-      console.error(e); 
+      console.error("Erro ao carregar avisos:", e); 
     } finally { 
       setLoading(false); 
     }
   };
 
-  // Re-busca quando os filtros mudam
   useEffect(() => { 
     fetchAnnouncements(); 
   }, [activeTab, viewArchived]);
@@ -91,7 +125,7 @@ export const MuralModule = ({ user }: { user: UserData | null }) => {
         </div>
       </div>
 
-      {/* Barra de Filtros (Tabs) */}
+      {/* Barra de Filtros */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
         <div className="bg-slate-100 p-1 rounded-2xl flex items-center">
           {categories.map((cat) => (
@@ -153,7 +187,7 @@ export const MuralModule = ({ user }: { user: UserData | null }) => {
                 </div>
                 
                 <div className="text-right">
-                  <p className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Postado por {ann.author_name}</p>
+                  <p className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Por {ann.author_name}</p>
                   <p className="text-[8px] font-bold text-slate-400 mt-0.5">{new Date(ann.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
@@ -163,7 +197,7 @@ export const MuralModule = ({ user }: { user: UserData | null }) => {
           <div className="col-span-full py-20 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
              <Megaphone size={40} className="mx-auto text-slate-100 mb-4" />
              <p className="text-slate-300 font-black uppercase tracking-widest text-[10px]">
-               {viewArchived ? 'Nenhum aviso no arquivo' : 'Nenhum aviso encontrado para este filtro'}
+               {viewArchived ? 'Arquivo vazio' : 'Nenhum comunicado encontrado'}
              </p>
           </div>
         )}

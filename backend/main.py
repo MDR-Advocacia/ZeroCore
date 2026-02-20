@@ -3,37 +3,39 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
-# Importação dos Roteadores
-from routers import auth, announcements
+from routers import auth, announcements, employees
 from database import engine, Base
 
-# Cria as tabelas se elas não existirem (Fallback ao Alembic)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="ZeroCore API")
 
-# Configuração de CORS
+# 1. Configuração de CORS 
+# 🔥 CRÍTICO: Quando usamos Cookies, não podemos usar ["*"].
+# Precisamos listar explicitamente os endereços do Frontend!
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Em produção, substitua pelo domínio do frontend
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000"
+    ], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Registro das Rotas (Onde o 404 acontece se faltar)
+# 2. Registro das Rotas
 app.include_router(auth.router)
 app.include_router(announcements.router)
+app.include_router(employees.router)
 
-# Configuração de Arquivos Estáticos (Uploads)
-# Garante que a pasta existe antes de montar
+# 3. Configuração de Arquivos Estáticos (Uploads)
 UPLOAD_DIR = "static/uploads/announcements"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Monta a rota /static para servir arquivos físicos
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def root():
-    return {"message": "ZeroCore API está online"}
+    return {"message": "ZeroCore API está online e funcional"}

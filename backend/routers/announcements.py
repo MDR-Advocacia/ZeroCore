@@ -13,7 +13,7 @@ router = APIRouter(prefix="/announcements", tags=["Mural de Avisos"])
 
 UPLOAD_DIR = "static/uploads/announcements"
 
-@router.get("/")
+@router.get("")
 async def list_announcements(
     category: Optional[str] = Query(None),
     show_archived: bool = Query(False),
@@ -74,7 +74,7 @@ async def list_announcements(
         })
     return results
 
-@router.post("/")
+@router.post("")
 async def create_announcement(
     title: str = Form(...),
     content: str = Form(...),
@@ -120,7 +120,7 @@ async def create_announcement(
     db.refresh(new_ann)
     return {"message": "Aviso publicado.", "id": str(new_ann.id)}
 
-@router.post("/{ann_id}/acknowledge")
+@router.post("{ann_id}/acknowledge")
 async def acknowledge_announcement(
     ann_id: str,
     db: Session = Depends(get_db),
@@ -134,7 +134,7 @@ async def acknowledge_announcement(
         db.commit()
     return {"message": "Ciência registrada."}
 
-@router.post("/{ann_id}/archive")
+@router.post("{ann_id}/archive")
 async def archive_announcement(
     ann_id: str,
     db: Session = Depends(get_db),
@@ -156,7 +156,7 @@ async def archive_announcement(
     db.commit()
     return {"message": "Aviso arquivado."}
 
-@router.post("/{ann_id}/unarchive")
+@router.post("{ann_id}/unarchive")
 async def unarchive_announcement(
     ann_id: str,
     db: Session = Depends(get_db),
@@ -179,7 +179,7 @@ async def unarchive_announcement(
     db.commit()
     return {"message": "Aviso restaurado com sucesso."}
 
-@router.get("/{ann_id}/logs")
+@router.get("{ann_id}/logs")
 async def get_announcement_logs(
     ann_id: str,
     db: Session = Depends(get_db),

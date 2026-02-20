@@ -1,78 +1,57 @@
-/**
- * CAMINHO: src/app/(dashboard)/layout.tsx
- * Layout modular para todas as páginas internas.
- */
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { Loader2, Menu } from 'lucide-react';
-import { Sidebar, MENU_ITEMS } from '@/components/Sidebar';
-import { UserData } from '@/types/user';
+import { Loader2 } from 'lucide-react';
+import { Sidebar } from '@/components/Sidebar';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserData | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
-  
-  const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
-    const token = localStorage.getItem('zc_token');
-    const storedUser = localStorage.getItem('zc_user');
-    
-    if (!token || !storedUser) { 
-      router.push('/login'); 
-    } else { 
-      setUser(JSON.parse(storedUser)); 
-      setLoading(false); 
-    }
-    
-    if (window.innerWidth >= 768) setSidebarOpen(true);
-  }, [router]);
+    const checkAuth = () => {
+      try {
+        const storedUser = localStorage.getItem('zc_user');
+        if (storedUser && storedUser !== "undefined" && storedUser !== "null") {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (err) {
+        console.error("Erro no cache local:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkAuth();
+  }, []);
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-      <Loader2 className="animate-spin text-[#002147]" size={40} />
-    </div>
-  );
+  // Proteção contra renderização de páginas sem usuário (causa tela preta)
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50">
+        <Loader2 className="animate-spin text-[#002147] mb-4" size={40} />
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Acessando Área Segura...</p>
+      </div>
+    );
+  }
 
-  const currentItem = MENU_ITEMS.find(i => i.path === pathname);
-  const currentTitle = currentItem?.title || "ZeroCore";
+  if (!user) {
+    if (typeof window !== 'undefined') window.location.replace('/login');
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row text-slate-800 font-sans selection:bg-[#D4AF37] selection:text-[#002147]">
-      <Sidebar isOpen={isSidebarOpen} setOpen={setSidebarOpen} user={user} />
+    <div className="h-screen w-screen bg-slate-50 flex overflow-hidden">
+      
+      {/* Sidebar importada separadamente conforme solicitado */}
+      <Sidebar user={user} />
 
-      <div className="flex-1 flex flex-col min-h-screen relative overflow-hidden">
-        <header className="h-24 bg-white border-b border-slate-100 flex items-center justify-between px-6 md:px-14 sticky top-0 z-40">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-3 bg-slate-50 rounded-xl">
-              <Menu size={24} />
-            </button>
-            <div className="flex flex-col">
-              <h2 className="font-black text-xl md:text-2xl text-[#002147] uppercase tracking-tighter italic leading-none">
-                {currentTitle}
-              </h2>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-5">
-            <div className="text-right hidden sm:block">
-              <p className="font-black text-sm text-[#002147] leading-none tracking-tight">{user?.name}</p>
-              <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.15em] mt-1">
-                {user?.role} • {user?.dept}
-              </p>
-            </div>
-            <div className="w-12 h-12 md:w-14 md:h-14 bg-[#002147] text-[#D4AF37] rounded-2xl flex items-center justify-center font-black shadow-lg text-xl ring-4 ring-slate-50 shrink-0">
-              {user?.name?.charAt(0)}
-            </div>
-          </div>
+      <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden">
+        <header className="h-20 bg-white border-b border-slate-100 flex items-center px-8 shrink-0 z-40">
+           <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Ambiente ZeroCore</h2>
         </header>
-
-        <main className="p-6 md:p-14 flex-1 overflow-y-auto pb-safe">
-          <div className="max-w-7xl mx-auto w-full">
+        
+        <main className="flex-1 overflow-y-auto bg-slate-50/50">
+          <div className="max-w-[1600px] mx-auto min-h-full p-8">
             {children}
           </div>
         </main>
