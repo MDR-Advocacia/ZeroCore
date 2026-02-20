@@ -27,6 +27,12 @@ class Employee(Base):
     department = Column(String)
     location = Column(String)
     title = Column(String)
+    
+    # 🔥 Novas colunas de RH adicionadas
+    admission_date = Column(DateTime, nullable=True)
+    termination_date = Column(DateTime, nullable=True)
+    birth_date = Column(DateTime, nullable=True)
+    
     meta = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
     

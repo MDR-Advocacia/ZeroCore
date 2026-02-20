@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Download, CheckCircle, Archive, History, User, Clock, Loader2, Bell, AlertCircle, RefreshCw } from 'lucide-react';
+import { fetchAPI } from '../../utils/api'; // 🔥 Importamos o seu utilitário de API!
 
 interface LogEntry { name: string; dept: string; }
 interface AnnouncementLogs { acknowledged: LogEntry[]; pending: LogEntry[]; }
@@ -20,14 +21,12 @@ export const AnnouncementDetailModal = ({ ann, user, onClose, onRefresh }: any) 
   );
 
   const fetchLogs = async () => {
-    const token = localStorage.getItem('zc_token');
-    const apiHost = window.location.hostname;
     try {
       setLoadingLogs(true);
       setError(null);
-      const res = await fetch(`http://${apiHost}:8000/announcements/${ann.id}/logs`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      
+      // 🔥 Usando fetchAPI para passar pelo proxy e enviar os Cookies
+      const res = await fetchAPI(`/announcements/${ann.id}/logs`);
       
       if (res.ok) {
         const data = await res.json();
@@ -43,13 +42,12 @@ export const AnnouncementDetailModal = ({ ann, user, onClose, onRefresh }: any) 
   };
 
   const handleAcknowledge = async () => {
-    const token = localStorage.getItem('zc_token');
-    const apiHost = window.location.hostname;
     try {
       setLoading(true);
-      const res = await fetch(`http://${apiHost}:8000/announcements/${ann.id}/acknowledge`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+      
+      // 🔥 Usando fetchAPI
+      const res = await fetchAPI(`/announcements/${ann.id}/acknowledge`, {
+        method: 'POST'
       });
       
       if (res.ok) {
@@ -73,13 +71,12 @@ export const AnnouncementDetailModal = ({ ann, user, onClose, onRefresh }: any) 
 
     if (!window.confirm(confirmMsg)) return;
 
-    const token = localStorage.getItem('zc_token');
-    const apiHost = window.location.hostname;
     try {
       setLoading(true);
-      const res = await fetch(`http://${apiHost}:8000/announcements/${ann.id}/${action}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+      
+      // 🔥 Usando fetchAPI
+      const res = await fetchAPI(`/announcements/${ann.id}/${action}`, {
+        method: 'POST'
       });
 
       if (res.ok) {
@@ -138,8 +135,9 @@ export const AnnouncementDetailModal = ({ ann, user, onClose, onRefresh }: any) 
                       <p className="text-[9px] text-slate-400 font-bold uppercase">Clique para baixar</p>
                     </div>
                   </div>
+                  {/* 🔥 Ajustado para usar o Proxy do Next.js via /api */}
                   <a 
-                    href={`http://${window.location.hostname}:8000${ann.attachment_url}`} 
+                    href={`/api${ann.attachment_url}`} 
                     download={ann.attachment_name}
                     target="_blank"
                     rel="noopener noreferrer"

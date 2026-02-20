@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import EmployeeProfile from '@/modules/Employees/EmployeeProfile';
+import  EmployeeProfile  from '@/modules/Employees/EmployeeProfile';
 
 // Esta é a página que o Next.js chama quando alguém acessa /colaboradores/qualquer.nome
 export default function DynamicProfilePage() {

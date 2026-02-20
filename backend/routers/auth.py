@@ -1,3 +1,5 @@
+import os # 🔥 Import necessário para ler o ambiente
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -5,9 +7,11 @@ from database import get_db
 from models.users import User, Employee
 from auth.ad_service import ADService
 from auth.security import create_access_token
-import uuid
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
+
+# 🔥 Verifica se estamos em produção. Se a variável não existir, assume ambiente de Desenvolvimento
+IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
 
 @router.post("/token")
 async def login_for_access_token(
@@ -63,7 +67,7 @@ async def login_for_access_token(
         httponly=True,
         max_age=18000,
         samesite="lax",
-        secure=False, # Mude para True em produção com HTTPS
+        secure=IS_PRODUCTION, # 🔥 Agora é dinâmico com base no ambiente
         path="/"
     )
 

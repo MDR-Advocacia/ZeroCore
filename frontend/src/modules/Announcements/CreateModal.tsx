@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Loader2, Send, Paperclip, FileText } from 'lucide-react';
 import { UserData } from '../../types/user';
+import { fetchAPI } from '../../utils/api'; // 🔥 Importamos o seu utilitário de API!
 
 interface CreateModalProps {
   isOpen: boolean;
@@ -33,11 +34,8 @@ export const CreateModal = ({ isOpen, onClose, user, onSuccess }: CreateModalPro
   const fetchDepartments = async () => {
     try {
       setLoadingDepts(true);
-      const token = localStorage.getItem('zc_token');
-      const apiHost = window.location.hostname;
-      const res = await fetch(`http://${apiHost}:8000/auth/departments`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      // 🔥 Usando o fetchAPI passando pelo Proxy do Next.js
+      const res = await fetchAPI('/auth/departments');
       if (res.ok) setDepartmentsList(await res.json());
     } catch (error) {
       console.error(error);
@@ -51,9 +49,6 @@ export const CreateModal = ({ isOpen, onClose, user, onSuccess }: CreateModalPro
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('zc_token');
-      const apiHost = window.location.hostname;
-      
       // IMPORTANTE: Para arquivos, usamos FormData em vez de JSON
       const data = new FormData();
       data.append('title', formData.title);
@@ -62,12 +57,10 @@ export const CreateModal = ({ isOpen, onClose, user, onSuccess }: CreateModalPro
       if (formData.target_dept) data.append('target_dept', formData.target_dept);
       if (formData.file) data.append('file', formData.file);
 
-      const res = await fetch(`http://${apiHost}:8000/announcements/`, {
+      // 🔥 Usando fetchAPI, SEM a barra no final, e deixando o navegador lidar com o Cookie!
+      // O seu fetchAPI já sabe que não deve forçar 'application/json' quando é FormData
+      const res = await fetchAPI('/announcements', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-          // O navegador define o Content-Type como multipart/form-data automaticamente com FormData
-        },
         body: data
       });
 

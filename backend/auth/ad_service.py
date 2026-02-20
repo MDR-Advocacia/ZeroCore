@@ -60,15 +60,15 @@ class ADService:
             return None
 
     @staticmethod
-    def set_user_groups(username: str, depts: List[str]):
-        """Vincula o usuário aos grupos ZC_DEPT no AD."""
+    def set_user_groups(username: str, depts: List[str]) -> bool:
+        """Vincula o usuário aos grupos ZC_DEPT no AD. Retorna True se sucesso, False se falha."""
         try:
             with ADService._get_conn() as conn:
                 # 1. Busca DN real do usuário
                 conn.search(AD_BASE_DN, f"(&(objectClass=user)(sAMAccountName={username}))", attributes=['distinguishedName', 'memberOf'])
                 if not conn.entries: 
                     print(f"👤 Usuário {username} não encontrado no AD.")
-                    return
+                    return False
                 
                 user_entry = conn.entries[0]
                 user_dn = user_entry.distinguishedName.value
@@ -95,9 +95,12 @@ class ADService:
                         if g_dn:
                             conn.modify(g_dn, {'member': [(MODIFY_ADD, [user_dn])]})
                             print(f"➕ Adicionado ao grupo: {g_cn}")
+            
+            return True # Sincronização com o AD concluída com sucesso
                             
         except Exception as e:
             print(f"❌ Erro na sincronização de grupos: {e}")
+            return False # Retorna False para avisar a rota que o AD está offline ou deu erro
 
     @staticmethod
     def list_all_users() -> List[Dict]:
